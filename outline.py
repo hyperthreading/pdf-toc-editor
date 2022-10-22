@@ -40,18 +40,18 @@ def get_outline_obj(reader: PdfReader, outline, d=0):
     return result
 
 
-def from_txt_to_outline_obj(text, offset):
+def from_txt_to_outline_obj(text, page_offset):
     def get_indent(depth):
         return " " * 4 * depth
 
-    def parse_data(text, offset):
+    def parse_data(text, page_offset):
         m = match(r"(.*) \((\d+)\)$", text)
         if not m:
             m = match(r"(.*) \(#(\d+)\)$", text)
-            offset = 0
+            page_offset = 0
         return {
             "title": m.group(1).strip(),
-            "page": int(m.group(2)) - 1 + offset
+            "page": int(m.group(2)) - 1 + page_offset
         }
 
     outline_entries: list[str] = text.split("\n")
@@ -61,7 +61,7 @@ def from_txt_to_outline_obj(text, offset):
     depth = 0
     parent = None
     for text_outline_entry in outline_entries:
-        entry_obj = OrderedDict(parse_data(text_outline_entry, offset))
+        entry_obj = OrderedDict(parse_data(text_outline_entry, page_offset))
         # deeper depth
         if text_outline_entry.startswith(get_indent(depth + 1)):
             ancestors.append(previous_entry_obj)
@@ -87,12 +87,12 @@ def from_txt_to_outline_obj(text, offset):
     return root
 
 
-def outline_obj_to_txt_outline(outline_obj, offset=0):
+def outline_obj_to_txt_outline(outline_obj, page_offset=0):
     def to_list(obj):
         result = []
         for outline_entry in obj:
-            page = outline_entry["page"] + 1 - offset
-            result.append(f'{outline_entry["title"]} ({page if page >= 0 else "#" + str(page + offset)})')
+            page = outline_entry["page"] + 1 - page_offset
+            result.append(f'{outline_entry["title"]} ({page if page >= 0 else "#" + str(page + page_offset)})')
             if "children" in outline_entry:
                 for child in to_list(outline_entry["children"]):
                     result.append(" " * 4 + child)
@@ -101,17 +101,17 @@ def outline_obj_to_txt_outline(outline_obj, offset=0):
     return "\n".join(to_list(outline_obj))
 
 
-def export_outline(pdf_path, output_path, offset=0):
+def export_outline(pdf_path, output_path, page_offset=0):
     reader = PdfReader(pdf_path)
     obj = get_outline_obj(reader, reader.outline)
-    txt_outline = outline_obj_to_txt_outline(obj, offset)
+    txt_outline = outline_obj_to_txt_outline(obj, page_offset)
     with open(output_path, "w") as f:
         f.write(txt_outline)
 
 
-def import_outline(pdf_path, input_path, offset=0):
+def import_outline(pdf_path, input_path, page_offset=0):
     with open(input_path, "r") as f:
-        outline_obj = from_txt_to_outline_obj(f.read(), offset)
+        outline_obj = from_txt_to_outline_obj(f.read(), page_offset)
 
     reader = PdfReader(pdf_path)
     writer = get_writer_with_content(reader)
