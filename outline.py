@@ -11,7 +11,8 @@ def get_writer_with_content(reader: PdfReader):
     writer.add_metadata(reader.metadata)
     writer.clone_reader_document_root(reader)
     # bugfix
-    del writer._root_object[constants.Core.OUTLINES]
+    if constants.Core.OUTLINES in writer._root_object:
+        del writer._root_object[constants.Core.OUTLINES]
     return writer
 
 
@@ -49,9 +50,17 @@ def from_txt_to_outline_obj(text, page_offset):
         if not m:
             m = match(r"(.*) \(#(\d+)\)$", text)
             page_offset = 0
+        # Unspecified
+        if not m:
+            title = text.strip()
+            page_num = 0
+            page_offset = 0
+        else:
+            title = m.group(1).strip()
+            page_num = int(m.group(2)) - 1
         return {
-            "title": m.group(1).strip(),
-            "page": int(m.group(2)) - 1 + page_offset
+            "title": title,
+            "page": page_num + page_offset
         }
 
     outline_entries: list[str] = text.split("\n")
